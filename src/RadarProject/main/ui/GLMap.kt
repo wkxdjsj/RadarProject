@@ -40,6 +40,7 @@ import main.deserializer.channel.ActorChannel.Companion.actorHasWeapons
 import main.deserializer.channel.ActorChannel.Companion.actors
 import main.deserializer.channel.ActorChannel.Companion.airDropLocation
 import main.deserializer.channel.ActorChannel.Companion.corpseLocation
+import main.deserializer.channel.ActorChannel.Companion.crateitems
 import main.deserializer.channel.ActorChannel.Companion.droppedItemLocation
 import main.deserializer.channel.ActorChannel.Companion.visualActors
 import main.deserializer.channel.ActorChannel.Companion.weapons
@@ -323,7 +324,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             NUMPAD_0 -> filterAmmo = filterAmmo * -1
 
         // Level 2 & 3 Toggle
-
+    /*
                 F6 -> {
                     if (filterArmorBag <= 4) {
                         filterArmorBag += 1
@@ -348,7 +349,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                     }
                     }
                 }
-
+*/
         // Zoom In/Out || Overrides Max/Min Zoom
             MINUS -> camera.zoom = camera.zoom + 0.00525f
             PLUS -> camera.zoom = camera.zoom - 0.00525f
@@ -649,7 +650,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                 espFontShadow.draw(spriteBatch, "[F12] Menu OFF", 270f, windowHeight - 25f)
 
             val num = nameToggles
-            espFontShadow.draw(spriteBatch, "[F8] Player Info: $num", 270f, windowHeight - 42f)
+            espFontShadow.draw(spriteBatch, "[F1] Player Info: $num", 270f, windowHeight - 42f)
 
             val znum = ZoomToggles
             espFontShadow.draw(spriteBatch, "[Num8] Zoom Toggle: $znum", 40f, windowHeight - 68f)
@@ -657,9 +658,10 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             val vnum = VehicleInfoToggles
             espFontShadow.draw(spriteBatch, "[F5] Vehicle Toggles: $vnum", 40f, windowHeight - 85f)
 
+            /*
             val mnum = filterArmorBag
             espFontShadow.draw(spriteBatch, "[F6] Item Armor Toggle: $mnum", 35f, windowHeight - 115f)
-
+*/
 
 
             val pinDistance = (pinLocation.cpy().sub(selfX, selfY).len() / 100).toInt()
@@ -835,13 +837,16 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         level2Filter = if (filterLvl2 != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("Bag2", "Armor2", "Helmet2")
+            arrayListOf("Bag2", "Armor2", "Helmet2","Bag3", "Armor3", "Helmet3")
         }
+
+        /*
         level3Filter = if (filterLvl3 != 1) {
             arrayListOf("")
         } else {
             arrayListOf("Bag3", "Armor3", "Helmet3")
         }
+*/
         paint(itemCamera.combined) {
             //Draw Corpse Icon
             corpseLocation.values.forEach {
@@ -885,6 +890,11 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                                         sx - iconScale / 2, syFix - iconScale / 2,
                                         iconScale, iconScale)
                             }
+
+                            val Crateitems = arrayListOf("AUG", "M24", "M249", "Groza", "AWM")
+                            if (items in Crateitems)
+                                hpgreen.draw(spriteBatch,"$items", sx - iconScale / 2, syFix - iconScale / 2)
+
                         }
                     }
 

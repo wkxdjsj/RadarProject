@@ -145,7 +145,7 @@ class ActorChannel(ChIndex: Int, client: Boolean = true): Channel(ChIndex, CHTYP
                     when {
                         actor.isVehicle ->
                             VehicleMoveComp(actor, outPayload)
-                        actor.isACharacter && repObj?.pathName == "Player" -> {
+                        actor.isACharacter && bIsActor -> {
                             selfID = actor.netGUID
                             CharacterMoveComp(outPayload)
                         }
