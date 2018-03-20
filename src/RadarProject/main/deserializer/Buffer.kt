@@ -1,6 +1,7 @@
 @file:Suppress("NAME_SHADOWING")
 package main.deserializer
 
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.Vector3
 import main.struct.ExportFlags
 import main.struct.Names
@@ -250,16 +251,18 @@ open class Buffer(
         return Pair(netGUID, obj)
     }
 
-    fun readVector(scaleFactor: Int = 10, MaxBitsPerComponent: Int = 24): Vector3 {
-        val bits = readInt(MaxBitsPerComponent)
-        val bias = 1 shl (bits + 1)
-        val max = 1 shl (bits + 2)
+    fun readVector2D() = Vector2(readFloat(), readFloat())
 
-        return Vector3(
-                (readInt(max) - bias) / scaleFactor.toFloat(),
-                (readInt(max) - bias) / scaleFactor.toFloat(),
-                (readInt(max) - bias) / scaleFactor.toFloat())
-    }
+    fun readVector(scaleFactor: Int = 10, MaxBitsPerComponent: Int = 24): Vector3 {
+            val bits = readInt(MaxBitsPerComponent)
+            val bias = 1 shl (bits + 1)
+            val max = 1 shl (bits + 2)
+
+            return Vector3(
+                    (readInt(max) - bias) / scaleFactor.toFloat(),
+                    (readInt(max) - bias) / scaleFactor.toFloat(),
+                    (readInt(max) - bias) / scaleFactor.toFloat())
+        }
 
     fun readFixedVector(maxValue: Int, numBits: Int) =
             Vector3(readFixedCompressedFloat(maxValue, numBits),

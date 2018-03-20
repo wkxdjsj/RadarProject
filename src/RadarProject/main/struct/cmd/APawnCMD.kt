@@ -5,6 +5,7 @@ import main.bugln
 import main.deserializer.ROLE_MAX
 import main.deserializer.channel.ActorChannel
 import main.deserializer.channel.ActorChannel.Companion.actors
+import main.deserializer.channel.ActorChannel.Companion.visualActors
 import main.struct.Actor
 import main.struct.Archetype.*
 import main.struct.Bunch
@@ -17,16 +18,14 @@ object APawnCMD {
         with(bunch) {
             when (waitingHandle) {
                 1 -> if (readBit()) {//bHidden
-                    ActorChannel.visualActors.remove(actor.netGUID)
-                    bugln { ",bHidden id$actor" }
+                    visualActors.remove(actor.netGUID)
                 }
                 2 -> if (!readBit()) {// bReplicateMovement
-                    ActorChannel.visualActors.remove(actor.netGUID)
-                    bugln { ",!bReplicateMovement id$actor " }
+                    if (!actor.isVehicle)
+                        visualActors.remove(actor.netGUID)
                 }
                 3 -> if (readBit()) {//bTearOff
-                    ActorChannel.visualActors.remove(actor.netGUID)
-                    bugln { ",bTearOff id$actor" }
+                    visualActors.remove(actor.netGUID)
                 }
                 4 -> {
                     val role = readInt(ROLE_MAX)
@@ -48,6 +47,7 @@ object APawnCMD {
                         }
                     }
                 }
+
                 7 -> {
                     val bReplicatesAttachment=readBit()
                     val a=bReplicatesAttachment

@@ -11,8 +11,8 @@ import main.struct.NetworkGUID
 import main.struct.*
 import main.util.tuple2
 import java.util.concurrent.ConcurrentHashMap
-import main.struct.Item.Companion.simplify
 import java.util.concurrent.ConcurrentLinkedQueue
+import Item.Companion.simplify
 
 object PlayerStateCMD : GameListener {
     init {

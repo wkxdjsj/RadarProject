@@ -10,7 +10,6 @@ class Icons(sheet: Texture, size: Int) {
     private val coordinates: Map<String, Array<Int>> = mapOf(
             // These Match up to the sprite sheet
             // 0 Items
-            "Gas" to arrayOf(1, 0),
             "Bandage" to arrayOf(2, 0),
             "FirstAid" to arrayOf(3, 0),
             "MedKit" to arrayOf(4, 0),
@@ -24,34 +23,12 @@ class Icons(sheet: Texture, size: Int) {
             "Armor3" to arrayOf(3, 1),
             "Helmet2" to arrayOf(4, 1),
             "Helmet3" to arrayOf(5, 1),
-            // 2 Melee
-            "Crowbar" to arrayOf(0, 2),
-            "Sickle" to arrayOf(1, 2),
-            "Machete" to arrayOf(2, 2),
             "Pan" to arrayOf(3, 2),
-            "Crossbow" to arrayOf(7, 2),
-            // 3 Throwables
             "SmokeBomb" to arrayOf(0, 3),
-            "FlashBang" to arrayOf(1, 3),
-            "Molotov" to arrayOf(2, 3),
             "Grenade" to arrayOf(3, 3),
-            // 4 Ammo
-            "9mm" to arrayOf(1, 4),
-            "45mm" to arrayOf(2, 4),
             "556mm" to arrayOf(3, 4),
             "762mm" to arrayOf(4, 4),
             "300mm" to arrayOf(5, 4),
-            // 5 Shotguns
-            "S686" to arrayOf(0, 5),
-            "SK12" to arrayOf(1, 5),
-            "S1897" to arrayOf(2, 5),
-            "SawnOff" to arrayOf(3, 5),
-            // 6 Pistols
-            "R45" to arrayOf(4, 6),
-            "R1895" to arrayOf(0, 6),
-            "P92" to arrayOf(1, 6),
-            "P1911" to arrayOf(2, 6),
-            "P18C" to arrayOf(3, 6),
             // 7 MGs
             "UZI" to arrayOf(0, 7),
             "UMP" to arrayOf(1, 7),
@@ -67,8 +44,8 @@ class Icons(sheet: Texture, size: Int) {
             "Groza" to arrayOf(4, 8),
             "AUG" to arrayOf(5, 8),
             // 9 Rifles
-            "Win94" to arrayOf(0, 9),
-            "VSS" to arrayOf(1, 9),
+           // "Win94" to arrayOf(0, 9),
+           // "VSS" to arrayOf(1, 9),
             "MK14" to arrayOf(2, 9),
             "SKS" to arrayOf(3, 9),
             "Mini14" to arrayOf(4, 9),
@@ -104,6 +81,7 @@ class Icons(sheet: Texture, size: Int) {
             "CQBSS" to arrayOf(4, 12)
             // "15x" to arrayOf(5, 12)
     )
+
 
     fun setIcon(key: String) {
         val iconCoordinates = coordinates[key]

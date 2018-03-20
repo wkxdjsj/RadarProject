@@ -1,41 +1,81 @@
 package main.struct.cmd
 
-import main.*
+
 import main.struct.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
-object TeamReplicator: GameListener {
-    private val counter=AtomicInteger(0)
-    val team=ConcurrentHashMap<String,Int>()
+object TeamReplicator {
 
-    init {
-        register(this)
-    }
-
-    override fun onGameOver() {
-        team.clear()
-        counter.set(0)
-    }
-
-    fun process(actor:Actor,bunch:Bunch,repObj:NetGuidCacheObject?,waitingHandle:Int,data:HashMap<String,Any?>):Boolean {
-        with(bunch) {
-            //      println("${actor.netGUID} $waitingHandle")
-            when (waitingHandle) {
-                16 -> {
-                    val playerLocation=propertyVector100()
+        fun process(actor:Actor,bunch:Bunch,repObj:NetGuidCacheObject?,waitingHandle:Int,data:HashMap<String,Any?>):Boolean {
+            actor as Team
+            with(bunch) {
+                //      println("${actor.netGUID} $waitingHandle")
+                when (waitingHandle) {
+                    16 -> {
+                        val playerLocation = propertyVector100()
+                        val a = playerLocation
+                    }
+                    17 -> {
+                        val playerRotation = readRotationShort()
+                        val a = playerRotation
+                    }
+                    18 -> {
+                        val playerName = propertyString()
+                    }
+                    19 -> {//Health
+                        val health = readUInt8()
+                        val a = health
+                    }
+                    20 -> {//HealthMax
+                        val HealthMax = readUInt8()
+                        val a = HealthMax
+                    }
+                    21 -> {//GroggyHealth
+                        val GroggyHealth = readUInt8()
+                        val a = GroggyHealth
+                    }
+                    22 -> {//GroggyHealthMax
+                        val GroggyHealthMax = readUInt8()
+                        val a = GroggyHealthMax
+                    }
+                    23 -> {//MapMarkerPosition
+                        val MapMarkerPosition = readVector2D()
+                        actor.mapMarkerPosition.set(MapMarkerPosition)
+                    }
+                    24 -> {//bIsDying
+                        val bIsDying = readBit()
+                        val a = bIsDying
+                    }
+                    25 -> {//bIsGroggying
+                        val bIsGroggying = readBit()
+                        val a = bIsGroggying
+                    }
+                    26 -> {//bQuitter
+                        val bQuitter = readBit()
+                        val a = bQuitter
+                    }
+                    27 -> {//bShowMapMarker
+                        val bShowMapMarker = readBit()
+                        actor.showMapMarker = bShowMapMarker
+                    }
+                    28 -> {//TeamVehicleType
+                        val TeamVehicleType = readInt(3)
+                        val a = TeamVehicleType
+                    }
+                    29 -> {//BoostGauge
+                        val BoostGauge = readFloat()
+                        val a = BoostGauge
+                    }
+                    30 -> {//MemberNumber
+                        val MemberNumber = readInt8()
+                        actor.memberNumber = MemberNumber
+                    }
+                    31 -> {//UniqueId
+                        val UniqueId = readString()
+                        val a = UniqueId
+                    }
+                    else -> return ActorReplicator.process(actor,bunch,repObj,waitingHandle,data)
                 }
-                17 -> {
-                    val playerRotation=readRotationShort()
-                }
-                18 -> {
-                    val playerName=propertyString()
-                    team[playerName]= counter.incrementAndGet()
-                    //println(team)
-                }
-                else -> return ActorReplicator.process(actor, bunch, repObj, waitingHandle, data)
+                return true
             }
-            return true
         }
     }
-}
