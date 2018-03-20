@@ -459,7 +459,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         iconImages = Icons(Texture(Gdx.files.internal("images/item-sprites.png")), 64)
 
 
-        itemAtlas = TextureAtlas(Gdx.files.internal("icons/itemIcons.txt"))
+        itemAtlas = TextureAtlas(Gdx.files.internal("icons/itemicons.txt"))
         for (region in itemAtlas.regions)
             itemIcons[region.name] = region.apply { flip(false, false) }
 
