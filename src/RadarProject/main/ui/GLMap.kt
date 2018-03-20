@@ -236,6 +236,8 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
     private var prevScreenY = -1f
     private var screenOffsetX = 0f
     private var screenOffsetY = 0f
+	private var menuw = 0f
+	private var menuh = 0f
 
 
     private fun windowToMap(x: Float, y: Float) =
@@ -387,9 +389,15 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             MINUS -> camera.zoom = camera.zoom + 0.00525f
             PLUS -> camera.zoom = camera.zoom - 0.00525f
         // lol
+				
+		// Move the menu
+			A -> menuw = menuw - 10f
+			D -> menuw = menuw + 10f
+			W -> menuh = menuh + 10f
+			S -> menuh = menuh - 10f
         }
         return false
-    }
+   }
 
     override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
         if (!dragging) return false
@@ -714,117 +722,116 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             safeZoneHint()
             drawPlayerNames(typeLocation[Player])
 
-
             val camnum = camera.zoom
 
             if (drawmenu == 1) {
-                spriteBatch.draw(menu, 20f, windowHeight / 2 - 235f)
+                spriteBatch.draw(menu, menuw + 20f, menuh + windowHeight / 2 - 235f)
 
                 // Filters
                 if (filterWeapon != 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + 180f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + 180f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + 180f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + 180f)
 
                 if (filterLvl2 != 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + 162f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + 162f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + 162f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + 162f)
 
                 if (filterHeals != 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + 144f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + 144f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + 144f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + 144f)
 
                 if (filterAttach != 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + 126f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + 126f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + 126f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + 126f)
 
                 if (filterScope != 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + 108f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + 108f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + 108f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + 108f)
 
                 if (filterAmmo != 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + 90f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + 90f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + 90f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + 90f)
 
                  if (filterThrow != 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + 72f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + 72f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + 72f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + 72f)
 					
-					//   Future Function               187f, windowHeight / 2 + 54f)
-					//   Future Function               187f, windowHeight / 2 + 36f)
-					//   Future Function               187f, windowHeight / 2 + 18f)
+					//   Future Function               187f, menuh + windowHeight / 2 + 54f)
+					//   Future Function               187f, menuh + windowHeight / 2 + 36f)
+					//   Future Function               187f, menuh + windowHeight / 2 + 18f)
 					
 				val camvalue = camera.zoom
                 when {
-                    camvalue <= 0.0100f -> menuFontOFF.draw(spriteBatch, "Max Zoom", 187f, windowHeight / 2 + 0f)
-                    camvalue >= 1f -> menuFontOFF.draw(spriteBatch, "Min Zoom", 187f, windowHeight / 2 + 0f)
-                    camvalue == 0.2500f -> menuFont.draw(spriteBatch, "Default", 187f, windowHeight / 2 + 0f)
-                    camvalue == 0.1250f -> menuFont.draw(spriteBatch, "Scouting", 187f, windowHeight / 2 + 0f)
-                    camvalue == 0.0833f -> menuFont.draw(spriteBatch, "Combat", 187f, windowHeight / 2 + 0f)
-                    camvalue == 0.0417f -> menuFont.draw(spriteBatch, "Looting", 187f, windowHeight / 2 + 0f)
+                    camvalue <= 0.0100f -> menuFontOFF.draw(spriteBatch, "Max Zoom", menuw + 187f, menuh + windowHeight / 2 + 0f)
+                    camvalue >= 1f -> menuFontOFF.draw(spriteBatch, "Min Zoom", menuw + 187f, menuh + windowHeight / 2 + 0f)
+                    camvalue == 0.2500f -> menuFont.draw(spriteBatch, "Default", menuw + 187f, menuh + windowHeight / 2 + 0f)
+                    camvalue == 0.1250f -> menuFont.draw(spriteBatch, "Scouting", menuw + 187f, menuh + windowHeight / 2 + 0f)
+                    camvalue == 0.0833f -> menuFont.draw(spriteBatch, "Combat", menuw + 187f, menuh + windowHeight / 2 + 0f)
+                    camvalue == 0.0417f -> menuFont.draw(spriteBatch, "Looting", menuw + 187f, menuh + windowHeight / 2 + 0f)
 
-                    else -> menuFont.draw(spriteBatch, ("%.4f").format(camnum), 187f, windowHeight / 2 + 0f)
+                    else -> menuFont.draw(spriteBatch, ("%.4f").format(camnum), menuw + menuh + 187f, windowHeight / 2 + 0f)
                 }
 
-//   Zoom + Variable               187f, windowHeight / 2 + -18f)
-//   Zoom - Variable               187f, windowHeight / 2 + -36f)
+//   Zoom + Variable               menuw + 187f, menuh + windowHeight / 2 + -18f)
+//   Zoom - Variable               menuw + 187f, menuh + windowHeight / 2 + -36f)
 
-//   Future Function                 187f, windowHeight / 2 + -54f)
-//   Future Function                 187f, windowHeight / 2 + -72f)
+//   Future Function                 menuw + 187f, menuh + windowHeight / 2 + -54f)
+//   Future Function                 menuw + 187f, menuh + windowHeight / 2 + -72f)
 				
                 // Name Toggles
                 val togs = nameToggles
                 if (nameToggles != 1)
 
-                    menuFontOn.draw(spriteBatch, "Enabled: $togs", 187f, windowHeight / 2 + -90f)
+                    menuFontOn.draw(spriteBatch, "Enabled: $togs", menuw + 187f, menuh + windowHeight / 2 + -90f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -90f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + -90f)
 
 
                 // Compass
                 if (drawcompass != 1)
 
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -108f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + -108f)
                 else
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -108f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + -108f)
 
                 // Grid
                 if (drawgrid == 1)
 
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -126f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + -126f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -126f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + -126f)
 
                 if (toggleView == 1)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -144f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + -144f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -144f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + -144f)
 
                 if (VehicleInfoToggles < 3)
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -162f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + -162f)
                 if (VehicleInfoToggles == 3)
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -162f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + -162f)
 
                 if (togglesafezone == 1)
 
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -180f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + -180f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -180f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + -180f)
 
                 if (airdroplines == 1)
 
-                    menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -198f)
+                    menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + -198f)
                 else
-                    menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -198f)
+                    menuFontOFF.draw(spriteBatch, "Disabled", menuw + 187f, menuh + windowHeight / 2 + -198f)
 
                 // DrawMenu == 1 already
-                menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -216f)
+                menuFontOn.draw(spriteBatch, "Enabled", menuw + 187f, menuh + windowHeight / 2 + -216f)
             
 			}
 
