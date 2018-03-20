@@ -38,6 +38,7 @@ import main.deserializer.channel.ActorChannel.Companion.actorHasWeapons
 import main.deserializer.channel.ActorChannel.Companion.actors
 import main.deserializer.channel.ActorChannel.Companion.airDropLocation
 import main.deserializer.channel.ActorChannel.Companion.corpseLocation
+import main.deserializer.channel.ActorChannel.Companion.crateitems
 import main.deserializer.channel.ActorChannel.Companion.droppedItemLocation
 import main.deserializer.channel.ActorChannel.Companion.firing
 import main.deserializer.channel.ActorChannel.Companion.visualActors
@@ -353,31 +354,6 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             NUMPAD_5 -> filterAttach = filterAttach * -1
             NUMPAD_6 -> filterScope = filterScope * -1
             NUMPAD_0 -> filterAmmo = filterAmmo * -1
-
-        // Level 2 & 3 Toggle
-/*
-           F9 -> {
-                    if (filterArmorBag <= 4) {
-                        filterArmorBag += 1
-                    }
-                    if (filterArmorBag == 4) {
-                        filterArmorBag = 1
-                    }
-                    // then
-                    if (filterArmorBag == 1) {
-                        filterLvl3 = 1
-                    }
-                    // or
-                    if (filterArmorBag == 2) {
-                        filterLvl2 = 1
-                    }
-                    // or
-                    if (filterArmorBag == 3) {
-                        //both?
-                        filterLvl23 = 1
-                    }
-           }
-*/
 
         // Zoom In/Out || Overrides Max/Min Zoom
             MINUS -> camera.zoom = camera.zoom + 0.00525f
@@ -944,6 +920,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         level2Filter = if (filterLvl2 != 1) {
             arrayListOf("")
         } else {
+
             arrayListOf(
                     "Item_Armor_D_01_Lv2_C",
                     "Item_Armor_C_01_Lv3_C",
@@ -966,6 +943,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                 "Item_Weapon_M249_C",
                 "Item_Weapon_Groza_C",
                 "Item_Weapon_AWM_C")
+
 
         paint(itemCamera.combined) {
             //Draw Corpse Icon
@@ -992,6 +970,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
             val iconScale = 2f / camera.zoom
 
+
             val sorted = ArrayList(droppedItemLocation.values)
             sorted.sortBy {
                 order[it._2]
@@ -1009,6 +988,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                         //println("Items: ${items}")
                         hpgreen.draw(spriteBatch,"$items", sx - itemScale / 2, syFix - itemScale / 2)
                         draw(icon, sx - itemScale / 2, syFix - itemScale / 2, itemScale, itemScale)
+
                     }
 
                     if ((items !in weaponsToFilter && items !in scopesToFilter && items !in attachToFilter && items !in level2Filter
