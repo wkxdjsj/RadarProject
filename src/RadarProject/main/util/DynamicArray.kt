@@ -2,7 +2,6 @@ package main.util
 
 import java.util.*
 
-
 class DynamicArray<T: Any?>(size:Int): Iterable<T> {
     constructor(cap:Int,size:Int): this(cap) {
         resize(size)

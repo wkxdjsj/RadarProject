@@ -14,6 +14,10 @@ import main.struct.cmd.PlayerStateCMD.selfID
 import main.util.*
 import java.util.concurrent.ConcurrentHashMap
 import main.struct.cmd.receiveProperties
+import main.struct.Team
+import main.ui.itemIcons
+import main.util.DynamicArray
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class ActorChannel(ChIndex: Int, client: Boolean = true): Channel(ChIndex, CHTYPE_ACTOR, client) {
     companion object: GameListener {
@@ -25,15 +29,16 @@ class ActorChannel(ChIndex: Int, client: Boolean = true): Channel(ChIndex, CHTYP
         val visualActors = ConcurrentHashMap<NetworkGUID, Actor>()
         val airDropLocation = ConcurrentHashMap<NetworkGUID, Vector3>()
         val droppedItemLocation = ConcurrentHashMap<NetworkGUID, tuple2<Vector2, String>>()
-        val droppedItemToItem = ConcurrentHashMap<NetworkGUID, NetworkGUID>()
+         val droppedItemToItem = ConcurrentHashMap<NetworkGUID, NetworkGUID>()
         val droppedItemGroup = ConcurrentHashMap<NetworkGUID, DynamicArray<NetworkGUID?>>()
         val droppedItemCompToItem = ConcurrentHashMap<NetworkGUID, NetworkGUID>()
-        val crateitems=ConcurrentHashMap<NetworkGUID,DynamicArray<NetworkGUID?>>()
+        val crateitems = ConcurrentHashMap<NetworkGUID,DynamicArray<NetworkGUID?>>()
         val corpseLocation = ConcurrentHashMap<NetworkGUID, Vector3>()
         val actorHasWeapons = ConcurrentHashMap<NetworkGUID, DynamicArray<NetworkGUID?>>()
-        val weapons = ConcurrentHashMap<NetworkGUID, Actor>()
-        val itemBag=ConcurrentHashMap<NetworkGUID,DynamicArray<NetworkGUID?>>()
-
+        val weapons = ConcurrentHashMap<NetworkGUID,Actor>()
+        val firing = ConcurrentLinkedQueue<tuple2<NetworkGUID,Long>>()
+        val itemBag = ConcurrentHashMap<NetworkGUID,DynamicArray<NetworkGUID?>>()
+        val teams = ConcurrentHashMap<NetworkGUID,Team>()
 
 
         override fun onGameOver() {
@@ -48,6 +53,7 @@ class ActorChannel(ChIndex: Int, client: Boolean = true): Channel(ChIndex, CHTYP
             corpseLocation.clear()
             weapons.clear()
             actorHasWeapons.clear()
+            firing.clear()
         }
     }
 
@@ -101,17 +107,16 @@ class ActorChannel(ChIndex: Int, client: Boolean = true): Channel(ChIndex, CHTYP
                         repObj = _subobj
                     } else {
                         val (classGUID, classObj) = bunch.readObject()//SubOjbectClass,SubObjectClassNetGUID
-
-                    // adding some stuff
-
-                        if (classObj != null && (actor.type == DroopedItemGroup || actor.type == DroppedItem || actor.type == AirDrop)) {
-                            val sn = Item.isGood(classObj.pathName)
-                            if (sn != null)
-                                droppedItemLocation[netguid] = tuple2(Vector2(actor.location.x, actor.location.y), sn)
-                        }
-
                         if (!classGUID.isValid() || classObj == null)
                             continue
+                        when (actor.type) {
+                            DroopedItemGroup, DroppedItem, AirDrop, DeathDropItemPackage -> {
+                        if (classObj.pathName in itemIcons)
+                        droppedItemLocation[netguid] = tuple2(Vector2(actor.location.x, actor.location.y), classObj.pathName)
+                         }
+                        else -> {
+                            }
+                        }
                         val subobj = NetGuidCacheObject(classObj.pathName, classGUID)
                         guidCache.registerNetGUID_Client(netguid, subobj)
                         repObj = guidCache.getObjectFromNetGUID(netguid)
@@ -193,7 +198,8 @@ class ActorChannel(ChIndex: Int, client: Boolean = true): Channel(ChIndex, CHTYP
                     if (client) {
                         actors[netGUID] = this
                         when (type) {
-                            Weapon -> weapons[netGUID] = this
+                            Archetype.Weapon -> weapons[netGUID] = this
+                            Archetype.Team -> teams[netGUID] = _actor as Team
                             AirDrop -> airDropLocation[netGUID]=location
                             DeathDropItemPackage -> corpseLocation[netGUID] = location
                             else -> {

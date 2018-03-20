@@ -3,11 +3,7 @@
 package main.ui
 
 
-import com.badlogic.gdx.graphics.Color.*
-import com.badlogic.gdx.graphics.GL20.GL_TEXTURE_2D
-import com.badlogic.gdx.graphics.Texture.TextureFilter.*
-import org.lwjgl.opengl.GL11.*
-import org.lwjgl.opengl.GL13.GL_CLAMP_TO_BORDER
+import Item.Companion.order
 import com.badlogic.gdx.ApplicationListener
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input.Buttons.LEFT
@@ -19,12 +15,14 @@ import com.badlogic.gdx.audio.Sound
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.Color.*
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.GL20.GL_TEXTURE_2D
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Texture
-import com.badlogic.gdx.graphics.g2d.BitmapFont
-import com.badlogic.gdx.graphics.g2d.GlyphLayout
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.Texture.TextureFilter.Linear
+import com.badlogic.gdx.graphics.Texture.TextureFilter.MipMap
+import com.badlogic.gdx.graphics.g2d.*
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.DEFAULT_CHARS
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter
@@ -41,13 +39,10 @@ import main.deserializer.channel.ActorChannel.Companion.actors
 import main.deserializer.channel.ActorChannel.Companion.airDropLocation
 import main.deserializer.channel.ActorChannel.Companion.corpseLocation
 import main.deserializer.channel.ActorChannel.Companion.droppedItemLocation
+import main.deserializer.channel.ActorChannel.Companion.firing
 import main.deserializer.channel.ActorChannel.Companion.visualActors
 import main.deserializer.channel.ActorChannel.Companion.weapons
-import main.struct.Actor
-import main.struct.Archetype
 import main.struct.Archetype.*
-import main.struct.Character
-import main.struct.NetworkGUID
 import main.struct.cmd.ActorCMD.actorHealth
 import main.struct.cmd.ActorCMD.actorWithPlayerState
 import main.struct.cmd.ActorCMD.playerStateToActor
@@ -65,18 +60,27 @@ import main.struct.cmd.GameStateCMD.TotalWarningDuration
 import main.struct.cmd.PlayerStateCMD.attacks
 import main.struct.cmd.PlayerStateCMD.selfID
 import main.struct.cmd.PlayerStateCMD.selfStateID
+import main.deserializer.channel.ActorChannel.Companion.teams
+import main.struct.*
 import main.struct.PlayerState
-import main.struct.cmd.TeamReplicator.team
+import main.struct.Team
+import main.struct.Weapon
+
 import main.struct.cmd.selfAttachTo
 import main.struct.cmd.selfCoords
 import main.struct.cmd.selfDirection
+import main.util.tuple3
 import main.util.tuple4
+import org.lwjgl.opengl.GL11.GL_TEXTURE_BORDER_COLOR
+import org.lwjgl.opengl.GL11.glTexParameterfv
+import org.lwjgl.opengl.GL13.GL_CLAMP_TO_BORDER
 import java.text.DecimalFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.pow
 
-typealias renderInfo = tuple4<Actor, Float, Float, Float>
+val itemIcons = HashMap<String, TextureAtlas.AtlasRegion>()
+typealias renderInfo = tuple4<Actor,Float,Float,Float>
 
 class GLMap : InputAdapter(), ApplicationListener, GameListener {
     companion object {
@@ -126,6 +130,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
     private lateinit var shapeRenderer: ShapeRenderer
     lateinit var mapErangel: Texture
     lateinit var mapMiramar: Texture
+
     private lateinit var DaMap: Texture
     private lateinit var iconImages: Icons
     private lateinit var corpseboximage: Texture
@@ -151,6 +156,10 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
     private lateinit var vehicle: Texture
     private lateinit var boato: Texture
     private lateinit var teamarrow: Texture
+    lateinit var itemAtlas: TextureAtlas
+    lateinit var pawnAtlas:TextureAtlas
+    lateinit var markers:Array<TextureRegion>
+
 
     private lateinit var vano: Texture
     private lateinit var vehicleo: Texture
@@ -187,6 +196,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
     private var windowHeight = initialWindowWidth
 
     private val aimStartTime = HashMap<NetworkGUID, Long>()
+    private val firingStartTime = LinkedList<tuple4<Float,Float,Float,Long>>()
     private val attackLineStartTime = LinkedList<Triple<NetworkGUID, NetworkGUID, Long>>()
     private val pinLocation = Vector2()
     // Menu Settings
@@ -203,9 +213,11 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
     private var drawcompass = -1
     private var drawmenu = 1
     private var toggleView = -1
-   // private var toggleVehicles = -1
-  //  private var toggleVNames = -1
+    // private var toggleVehicles = -1
+    //  private var toggleVNames = -1
     private var drawgrid = -1
+    private var airdroplines = 1
+    private var togglesafezone = 1
     private var nameToggles = 4
     private var VehicleInfoToggles = 1
     private var ZoomToggles = 1
@@ -215,6 +227,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
     private var attachToFilter = arrayListOf("")
     private var level2Filter = arrayListOf("")
     private var level3Filter = arrayListOf("")
+    private var level23Filter = arrayListOf("")
     private var healsToFilter = arrayListOf("")
     private var ammoToFilter = arrayListOf("")
     private var throwToFilter = arrayListOf("")
@@ -284,29 +297,48 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
         // Change Player Info
             F1 -> {
-                if (nameToggles < 6) {nameToggles += 1}
-                if (nameToggles == 6) {nameToggles = 1}
+                if (nameToggles < 5) {
+                    nameToggles += 1
+                }
+                if (nameToggles == 5) {
+                    nameToggles = 0
+                }
             }
 
             F5 -> {
-                if (VehicleInfoToggles <= 4) {VehicleInfoToggles += 1}
-                if (VehicleInfoToggles == 4) {VehicleInfoToggles = 1}
+                if (VehicleInfoToggles <= 4) {
+                    VehicleInfoToggles += 1
+                }
+                if (VehicleInfoToggles == 4) {
+                    VehicleInfoToggles = 1
+                }
             }
         // Zoom (Loot, Combat, Scout)
             NUMPAD_8 -> {
-                if (ZoomToggles <= 4) { ZoomToggles += 1}
-                if (ZoomToggles == 4) { ZoomToggles = 1}
+                if (ZoomToggles <= 4) {
+                    ZoomToggles += 1
+                }
+                if (ZoomToggles == 4) {
+                    ZoomToggles = 1
+                }
                 // then
-                if (ZoomToggles == 1) {camera.zoom = 1 / 8f}
+                if (ZoomToggles == 1) {
+                    camera.zoom = 1 / 8f
+                }
                 // or
-                if (ZoomToggles == 2) {camera.zoom = 1 / 12f}
+                if (ZoomToggles == 2) {
+                    camera.zoom = 1 / 12f
+                }
                 // or
-                if (ZoomToggles == 3) {camera.zoom = 1 / 24f}
+                if (ZoomToggles == 3) {
+                    camera.zoom = 1 / 24f
+                }
             }
         // Other Filter Keybinds
             F2 -> drawcompass = drawcompass * -1
             F3 -> drawgrid = drawgrid * -1
-
+            F7 -> togglesafezone = togglesafezone * -1
+            F8 -> airdroplines = airdroplines * -1
         // Toggle View Line
             F4 -> toggleView = toggleView * -1
 
@@ -323,8 +355,8 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             NUMPAD_0 -> filterAmmo = filterAmmo * -1
 
         // Level 2 & 3 Toggle
-
-             /*   F6 -> {
+/*
+           F9 -> {
                     if (filterArmorBag <= 4) {
                         filterArmorBag += 1
                     }
@@ -342,17 +374,15 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                     // or
                     if (filterArmorBag == 3) {
                         //both?
-                        filterLvl2 = 1
-                    if (filterArmorBag == 3) {
-                        filterLvl3 = 1
+                        filterLvl23 = 1
                     }
-                    }
-                }
+           }
 */
+
         // Zoom In/Out || Overrides Max/Min Zoom
             MINUS -> camera.zoom = camera.zoom + 0.00525f
             PLUS -> camera.zoom = camera.zoom - 0.00525f
-            // lol
+        // lol
         }
         return false
     }
@@ -427,7 +457,19 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
         grenade = Texture(Gdx.files.internal("images/grenade.png"))
         iconImages = Icons(Texture(Gdx.files.internal("images/item-sprites.png")), 64)
-        var cur = 0
+
+
+        itemAtlas = TextureAtlas(Gdx.files.internal("icons/itemIcons.txt"))
+        for (region in itemAtlas.regions)
+            itemIcons[region.name] = region.apply { flip(false, false) }
+
+        pawnAtlas = TextureAtlas(Gdx.files.internal("icons/Markers.txt"))
+        for (region in pawnAtlas.regions)
+            region.flip(false,true)
+
+        markers = arrayOf(pawnAtlas.findRegion("marker1"),pawnAtlas.findRegion("marker2"),
+                pawnAtlas.findRegion("marker3"),pawnAtlas.findRegion("marker4"))
+
 
 
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, floatArrayOf(bgColor.r, bgColor.g, bgColor.b, bgColor.a))
@@ -512,7 +554,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         generatorNumber.dispose()
         generator.dispose()
     }
-
+    private val dirUnitVector = Vector2(1f,0f)
     override fun render() {
         Gdx.gl.glClearColor(bgColor.r, bgColor.g, bgColor.b, bgColor.a)
         Gdx.gl.glClearColor(0.417f, 0.417f, 0.417f, 0f)
@@ -545,9 +587,9 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
         paint(camera.combined) {
 
-                    draw(DaMap, 0f, 0f, mapWidth, mapWidth,
-                            0, 0, DaMap.width, DaMap.height,
-                            false, true)
+            draw(DaMap, 0f, 0f, mapWidth, mapWidth,
+                    0, 0, DaMap.width, DaMap.height,
+                    false, true)
 
         }
 
@@ -555,6 +597,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         Gdx.gl.glEnable(GL20.GL_BLEND)
 
         drawCircles()
+        drawAttackLine(currentTime)
 
         val typeLocation = EnumMap<Archetype, MutableList<renderInfo>>(Archetype::class.java)
         for ((_, actor) in visualActors)
@@ -567,7 +610,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             }
 
 
-       // val zero = numKills.toString()
+        // val zero = numKills.toString()
         paint(fontCamera.combined) {
 
             // NUMBER PANEL
@@ -649,7 +692,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                 espFontShadow.draw(spriteBatch, "[F12] Menu OFF", 270f, windowHeight - 25f)
 
             val num = nameToggles
-            espFontShadow.draw(spriteBatch, "[F8] Player Info: $num", 270f, windowHeight - 42f)
+            espFontShadow.draw(spriteBatch, "[F1] Player Info: $num", 270f, windowHeight - 42f)
 
             val znum = ZoomToggles
             espFontShadow.draw(spriteBatch, "[Num8] Zoom Toggle: $znum", 40f, windowHeight - 68f)
@@ -657,9 +700,8 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             val vnum = VehicleInfoToggles
             espFontShadow.draw(spriteBatch, "[F5] Vehicle Toggles: $vnum", 40f, windowHeight - 85f)
 
-           // val mnum = filterArmorBag
-            //espFontShadow.draw(spriteBatch, "[F6] Item Armor Toggle: $mnum", 35f, windowHeight - 115f)
-
+             val mnum = filterArmorBag
+            espFontShadow.draw(spriteBatch, "[F9] Item Armor Toggle: $mnum", 35f, windowHeight - 115f)
 
 
             val pinDistance = (pinLocation.cpy().sub(selfX, selfY).len() / 100).toInt()
@@ -667,7 +709,6 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
             safeZoneHint()
             drawPlayerNames(typeLocation[Player])
-            //drawMyself(tuple4(null, selfX, selfY, selfDir.angle()))
 
 
             val camnum = camera.zoom
@@ -717,8 +758,8 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                     camvalue >= 1f -> menuFontOFF.draw(spriteBatch, "Min Zoom", 187f, windowHeight / 2 + -27f)
                     camvalue == 0.2500f -> menuFont.draw(spriteBatch, "Default", 187f, windowHeight / 2 + -27f)
                     camvalue == 0.1250f -> menuFont.draw(spriteBatch, "Scouting", 187f, windowHeight / 2 + -27f)
-                    camvalue >= 0.0833f -> menuFont.draw(spriteBatch, "Combat", 187f, windowHeight / 2 + -27f)
-                    camvalue <= 0.0417f -> menuFont.draw(spriteBatch, "Looting", 187f, windowHeight / 2 + -27f)
+                    camvalue == 0.0833f -> menuFont.draw(spriteBatch, "Combat", 187f, windowHeight / 2 + -27f)
+                    camvalue == 0.0417f -> menuFont.draw(spriteBatch, "Looting", 187f, windowHeight / 2 + -27f)
 
                     else -> menuFont.draw(spriteBatch, ("%.4f").format(camnum), 187f, windowHeight / 2 + -27f)
                 }
@@ -756,10 +797,23 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                 if (VehicleInfoToggles == 3)
                     menuFontOFF.draw(spriteBatch, "Disabled", 187f, windowHeight / 2 + -161f)
 
-                // DrawMenu == 1 already
                 menuFontOn.draw(spriteBatch, "Enabled", 187f, windowHeight / 2 + -179f)
+
+                if (togglesafezone == 1)
+
+                    menuFontOn.draw(spriteBatch, "[F7] Enabled SafeZone", 50f, windowHeight / 2 + -200)
+                else
+                    menuFontOFF.draw(spriteBatch, "[F7] Disabled SafeZone", 50f, windowHeight / 2 + -200f)
+
+                if (airdroplines == 1)
+
+                    menuFontOn.draw(spriteBatch, "[F8] AirDrop Lines Enabled", 50f, windowHeight / 2 + -220)
+                else
+                    menuFontOFF.draw(spriteBatch, "[F8] AirDrop Lines Disabled", 50f, windowHeight / 2 + -220f)
+
+
             }
-            // DrawMenu == 0 (Disabled)
+
 
 
             if (drawcompass == 1) {
@@ -793,55 +847,126 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
         }
 
+        drawMapMarkers()
 
         // This makes the array empty if the filter is off for performance with an inverted function since arrays are expensive
         scopesToFilter = if (filterScope != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("DotSight", "Aimpoint", "Holosight", "CQBSS", "ACOG")
+            arrayListOf(
+                    "Item_Attach_Weapon_Upper_Holosight_C",
+                    "Item_Attach_Weapon_Upper_DotSight_01_C",
+                    "Item_Attach_Weapon_Upper_Aimpoint_C",
+                    "Item_Attach_Weapon_Upper_CQBSS_C",
+                    "Item_Attach_Weapon_Upper_ACOG_01_C")
         }
 
 
         attachToFilter = if (filterAttach != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("AR.Stock", "S.Loops", "CheekPad", "A.Grip", "V.Grip", "U.Ext", "AR.Ext", "S.Ext", "U.ExtQ", "AR.ExtQ", "S.ExtQ", "Choke", "AR.Comp", "FH", "U.Supp", "AR.Supp", "S.Supp")
+            arrayListOf(
+                    "Item_Attach_Weapon_Magazine_ExtendedQuickDraw_SniperRifle_C",
+                    "Item_Attach_Weapon_Magazine_Extended_SniperRifle_C",
+                    "Item_Attach_Weapon_Magazine_ExtendedQuickDraw_Large_C",
+                    "Item_Attach_Weapon_Magazine_Extended_Large_C",
+                    "Item_Attach_Weapon_Stock_SniperRifle_CheekPad_C",
+                    "Item_Attach_Weapon_Stock_SniperRifle_BulletLoops_C",
+                    "Item_Attach_Weapon_Stock_AR_Composite_C",
+                    "Item_Attach_Weapon_Muzzle_Suppressor_SniperRifle_C",
+                    "Item_Attach_Weapon_Muzzle_Suppressor_Large_C",
+                    "Item_Attach_Weapon_Muzzle_Suppressor_Medium_C",
+                    "Item_Attach_Weapon_Muzzle_FlashHider_Medium_C",
+                    "Item_Attach_Weapon_Magazine_ExtendedQuickDraw_Medium_C",
+                    "Item_Attach_Weapon_Magazine_Extended_Medium_C",
+                    "Item_Attach_Weapon_Muzzle_FlashHider_Large_C",
+                    "Item_Attach_Weapon_Muzzle_Compensator_Medium_C",
+                    "Item_Attach_Weapon_Lower_Foregrip_C",
+                    "Item_Attach_Weapon_Lower_AngledForeGrip_C")
         }
 
         weaponsToFilter = if (filterWeapon != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("M16A4", "HK416", "Kar98k", "SCAR-L", "AUG", "M249", "AWM", "Groza", "M24", "MK14", "Mini14", "DP28", "UMP", "Vector", "UZI", "Pan")
+            arrayListOf(
+                    "Item_Weapon_AWM_C",
+                    "Item_Weapon_M24_C",
+                    "Item_Weapon_Kar98k_C",
+                    "Item_Weapon_AUG_C",
+                    "Item_Weapon_M249_C",
+                    "Item_Weapon_Mk14_C",
+                    "Item_Weapon_Groza_C",
+                    "Item_Weapon_HK416_C",
+                    "Item_Weapon_SCAR-L_C",
+                    "Item_Weapon_Mini14_C",
+                    "Item_Weapon_M16A4_C",
+                    "Item_Weapon_SKS_C",
+                    "Item_Weapon_AK47_C",
+                    "Item_Weapon_DP28_C",
+                    "Item_Weapon_UMP_C")
         }
 
         healsToFilter = if (filterHeals != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("Bandage", "FirstAid", "MedKit", "Drink", "Pain", "Syringe")
+            arrayListOf(
+                    "Item_Heal_Bandage_C",
+                    "Item_Heal_MedKit_C",
+                    "Item_Heal_FirstAid_C",
+                    "Item_Boost_PainKiller_C",
+                    "Item_Boost_EnergyDrink_C",
+                    "Item_Boost_AdrenalineSyringe_C")
         }
 
         ammoToFilter = if (filterAmmo != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("9mm", "45mm", "556mm", "762mm", "300mm")
+            arrayListOf(
+                    "Item_Ammo_762mm_C",
+                    "Item_Ammo_556mm_C",
+                    "Item_Ammo_300Magnum_C",
+                    "Item_Weapon_Pan_C",
+                    "Item_Ammo_9mm_C",
+                    "Item_Ammo_45ACP_C",
+                    "Item_Ammo_12Guage_C")
         }
 
         throwToFilter = if (filterThrow != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("Grenade", "FlashBang", "SmokeBomb", "Molotov")
+            arrayListOf(
+                    "Item_Weapon_Grenade_C",
+                    "Item_Weapon_FlashBang_C",
+                    "Item_Weapon_SmokeBomb_C",
+                    "Item_Weapon_Molotov_C")
         }
 
         level2Filter = if (filterLvl2 != 1) {
             arrayListOf("")
         } else {
-            arrayListOf("Bag2", "Armor2", "Helmet2","Bag3", "Armor3", "Helmet3")
+            arrayListOf(
+                    "Item_Armor_D_01_Lv2_C",
+                    "Item_Armor_C_01_Lv3_C",
+                    "Item_Head_G_01_Lv3_C",
+                    "Item_Head_F_02_Lv2_C",
+                    "Item_Head_F_01_Lv2_C",
+                    "Item_Back_C_02_Lv3_C",
+                    "Item_Back_C_01_Lv3_C",
+                    "Item_Back_F_01_Lv2_C",
+                    "Item_Back_F_02_Lv2_C",
+                    "Item_Back_E_01_Lv1_C",
+                    "Item_Armor_E_01_Lv1_C",
+                    "Item_Head_E_01_Lv1_C",
+                    "Item_Back_E_02_Lv1_C",
+                    "Item_Head_E_02_Lv1_C")
         }
-        level3Filter = if (filterLvl3 != 1) {
-            arrayListOf("")
-        } else {
-            arrayListOf("Bag3", "Armor3", "Helmet3")
-        }
+
+        val Crateitems = arrayListOf("Item_Weapon_AUG_C",
+                "Item_Weapon_M24_C",
+                "Item_Weapon_M249_C",
+                "Item_Weapon_Groza_C",
+                "Item_Weapon_AWM_C")
+
         paint(itemCamera.combined) {
             //Draw Corpse Icon
             corpseLocation.values.forEach {
@@ -865,28 +990,37 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                         false, true)
             }
 
-        val iconScale = 2f / camera.zoom
+            val iconScale = 2f / camera.zoom
 
-            droppedItemLocation.values
-                    .forEach {
-                        val (x, y) = it._1
-                        val items = it._2
-                        val (sx, sy) = Vector2(x, y).mapToWindow()
-                        val syFix = windowHeight - sy
-//                        println("Items: ${it}")
+            val sorted = ArrayList(droppedItemLocation.values)
+            sorted.sortBy {
+                order[it._2]
+            }
+            sorted.forEach {
+                val (x, y) = it._1
+                val items = it._2
+                val icon = itemIcons[items]
+                val (sx, sy) = Vector2(x, y).mapToWindow()
+                val syFix = windowHeight - sy
 
-                        items.forEach {
-                            if ((items !in weaponsToFilter && items !in scopesToFilter && items !in attachToFilter && items !in level2Filter
-                                            && items !in level3Filter && items !in ammoToFilter && items !in healsToFilter) && items !in throwToFilter
-                                    && iconScale > 20 && sx > 0 && sx < windowWidth && syFix > 0 && syFix < windowHeight) {
-                                iconImages.setIcon(items)
 
-                                draw(iconImages.icon,
-                                        sx - iconScale / 2, syFix - iconScale / 2,
-                                        iconScale, iconScale)
-                            }
-                        }
+                items.forEach {
+                    if (items in Crateitems) {
+                        //println("Items: ${items}")
+                        hpgreen.draw(spriteBatch,"$items", sx - itemScale / 2, syFix - itemScale / 2)
+                        draw(icon, sx - itemScale / 2, syFix - itemScale / 2, itemScale, itemScale)
                     }
+
+                    if ((items !in weaponsToFilter && items !in scopesToFilter && items !in attachToFilter && items !in level2Filter
+                                    && items !in ammoToFilter && items !in healsToFilter) && items !in throwToFilter
+                            && iconScale > 20 && sx > 0 && sx < windowWidth && syFix > 0 && syFix < windowHeight) {
+
+                        draw(icon, sx - itemScale / 2, syFix - itemScale / 2, itemScale, itemScale)
+                        //println("Items: ${items}")
+                    }
+
+              }
+          }
 
             drawMyself(tuple4(null, selfX, selfY, selfDirection))
             drawPawns(typeLocation)
@@ -894,12 +1028,17 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         }
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
-        draw(Line) {
-            airDropLocation.values.forEach {
-                val (x, y) = it
-                val airdropcoords = (Vector2(x, y))
-                color = YELLOW
-                line(selfCoords, airdropcoords)
+        if (airdroplines == 1) {
+            draw(Line) {
+                airDropLocation.values.forEach {
+                    val (x, y) = it
+                    val airdropcoords = (Vector2(x, y))
+                    color = YELLOW
+
+                    line(selfCoords, airdropcoords)
+
+
+                }
             }
             Gdx.gl.glDisable(GL20.GL_BLEND)
         }
@@ -918,7 +1057,8 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             circle(pinLocation, pinRadius * zoom, 10)
 
         }
-        drawAttackLine(currentTime)
+
+
         Gdx.gl.glDisable(GL20.GL_BLEND)
 
     }
@@ -953,8 +1093,31 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         }
     }
 
+    private fun drawCircles() {
+        Gdx.gl.glLineWidth(2f)
+        draw(Line) {
+            //vision circle
 
-    private fun drawAttackLine(currentTime: Long) {
+            color = safeZoneColor
+            circle(PoisonGasWarningPosition, PoisonGasWarningRadius, 100)
+
+            color = BLUE
+            circle(SafetyZonePosition, SafetyZoneRadius, 100)
+
+            if (togglesafezone == 1) {
+                if (PoisonGasWarningPosition.len() > 0) {
+                    color = safeDirectionColor
+                    line(selfCoords, PoisonGasWarningPosition)
+                }
+
+            }
+        }
+
+        Gdx.gl.glLineWidth(1f)
+    }
+
+
+    private  fun drawAttackLine(currentTime: Long) {
         while (attacks.isNotEmpty()) {
             val (A, B) = attacks.poll()
             attackLineStartTime.add(Triple(A, B, currentTime))
@@ -1002,28 +1165,6 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
             }
         }
     }
-
-    private fun drawCircles() {
-        Gdx.gl.glLineWidth(2f)
-        draw(Line) {
-            //vision circle
-
-            color = safeZoneColor
-            circle(PoisonGasWarningPosition, PoisonGasWarningRadius, 100)
-
-            color = BLUE
-            circle(SafetyZonePosition, SafetyZoneRadius, 100)
-
-            if (PoisonGasWarningPosition.len() > 0) {
-                color = safeDirectionColor
-                line(selfCoords, PoisonGasWarningPosition)
-            }
-
-        }
-
-        Gdx.gl.glLineWidth(1f)
-    }
-
 
     private fun drawPawns(typeLocation: EnumMap<Archetype, MutableList<renderInfo>>) {
         val iconScale = 2f / camera.zoom
@@ -1088,7 +1229,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                         val (sx, sy) = Vector2(x, y).mapToWindow()
 
 
-                        if (VehicleInfoToggles == 2)compaseFont.draw(spriteBatch, "BIKE", sx + 15, windowHeight - sy - 2)
+                        if (VehicleInfoToggles == 2) compaseFont.draw(spriteBatch, "BIKE", sx + 15, windowHeight - sy - 2)
 
                         spriteBatch.draw(
                                 BikeBLUE,
@@ -1099,8 +1240,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                         val v_x = actor!!.velocity.x
                         val v_y = actor.velocity.y
                         if (actor.attachChildren.isNotEmpty() || v_x * v_x + v_y * v_y > 40) {
-                            spriteBatch.draw(
-                                            BikeRED,
+                            spriteBatch.draw(BikeRED,
                                     sx + 2, windowHeight - sy - 2, 4.toFloat() / 2,
                                     4.toFloat() / 2, 4.toFloat(), 4.toFloat(), iconScale / 3, iconScale / 3,
                                     dir * -1, 0, 0, 64, 64, true, false
@@ -1199,7 +1339,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                         val (actor, x, y, dir) = it
                         val (sx, sy) = Vector2(x, y).mapToWindow()
 
-                        if (VehicleInfoToggles == 2)compaseFont.draw(spriteBatch, "PICKUP", sx + 15, windowHeight - sy - 2)
+                        if (VehicleInfoToggles == 2) compaseFont.draw(spriteBatch, "PICKUP", sx + 15, windowHeight - sy - 2)
 
                         spriteBatch.draw(
                                 pickupBLUE,
@@ -1260,12 +1400,13 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                         val (actor, x, y, dir) = it
                         val (sx, sy) = Vector2(x, y).mapToWindow()
                         val playerStateGUID = actorWithPlayerState[actor!!.netGUID] ?: return@forEach
-                        val PlayerState= actors[playerStateGUID] as? PlayerState ?: return@forEach
-                        val teamNumber = PlayerState.teamNumber
-                        val attach=actor.attachChildren.firstOrNull()
-                        val teamId=isTeamMate(actor)
+                        val PlayerState = actors[playerStateGUID] as? PlayerState ?: return@forEach
+                        val selfStateGUID = actorWithPlayerState[selfID] ?: return@forEach
+                        val selfState = actors[selfStateGUID] as? PlayerState ?: return@forEach
 
-                        if (teamId > 0 ) {
+                        val name = PlayerState.name
+
+                        if (PlayerState.teamNumber == selfState.teamNumber) { // new IF statement
 
                             // Can't wait for the "Omg Players don't draw issues
                             spriteBatch.draw(
@@ -1353,7 +1494,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         }
     }
 
-    private fun drawPlayerNames(players:MutableList<renderInfo>?) {
+    private fun drawPlayerNames(players: MutableList<renderInfo>?) {
         players?.forEach {
 
             val zoom = camera.zoom
@@ -1392,10 +1533,9 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
                     if (equippedWeapons != null) {
                         for (w in equippedWeapons) {
-                            val a = weapons[w ?: continue] ?: continue
-                            val result = a.typeName.split("_")
-                            weapon += "${result[2].substring(4)}\n"
-
+                            val weap = weapons[w ?: continue] as? Weapon ?: continue
+                            val result = weap.typeName.split("_")
+                            weapon += "<${result[2].substring(4)}>->${weap.currentAmmoInClip}\n"
                         }
                     }
                     var items = ""
@@ -1408,37 +1548,44 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
                         items += "${element._1}->${element._2}\n"
                     }
 
+
+
                     when (nameToggles) {
 
                         1 -> {
-                            nameFont.draw(spriteBatch,
-                                    "$angle°${distance}m\n" +
-                                            "|N: $name\n" +
-                                            "|H: \n" +
-                                            "|K: ($numKills)\nTN.($teamNumber)\n" +
-                                            "|S: \n" +
-                                            "|W: $weapon\n" +
-                                            "|I: $items"
+                            if (actor is Character) {
+                                val health = if (actor.health <= 0f) actor.groggyHealth else actor.health
 
-                                    , sx + 20, windowHeight - sy + 20)
+                                nameFont.draw(spriteBatch,
+                                        "$angle°${distance}m\n" +
+                                                "|N: $name\n" +
+                                                "|H: \n" +
+                                                "|K: ($numKills)\nTN.($teamNumber)\n" +
+                                                "|S: \n" +
+                                                "|W: $weapon\n" +
+                                                "|I: $items"
 
-                            val healthText = health
-                            when {
-                                healthText > 80f -> hpgreen.draw(spriteBatch, "\n${df.format(health)}", sx + 40, windowHeight - sy + 9)
-                                healthText > 33f -> hporange.draw(spriteBatch, "\n${df.format(health)}", sx + 40, windowHeight - sy + 9)
-                                else -> hpred.draw(spriteBatch, "\n${df.format(health)}", sx + 40, windowHeight - sy + 9)
-                            }
+                                        , sx + 20, windowHeight - sy + 20)
 
-                            if (actor is Character)
+                                val healthText = health
                                 when {
-                                    actor.isGroggying -> {
-                                        hpred.draw(spriteBatch, "DOWNED", sx + 40, windowHeight - sy + -42)
-                                    }
-                                    actor.isReviving -> {
-                                        hporange.draw(spriteBatch, "GETTING REVIVED", sx + 40, windowHeight - sy + -42)
-                                    }
-                                    else -> hpgreen.draw(spriteBatch, "Alive", sx + 40, windowHeight - sy + -42)
+                                    healthText > 80f -> hpgreen.draw(spriteBatch, "\n${df.format(health)}", sx + 40, windowHeight - sy + 9)
+                                    healthText > 33f -> hporange.draw(spriteBatch, "\n${df.format(health)}", sx + 40, windowHeight - sy + 9)
+                                    else -> hpred.draw(spriteBatch, "\n${df.format(health)}", sx + 40, windowHeight - sy + 9)
                                 }
+
+                                    when {
+                                        actor.isGroggying -> {
+                                            hpred.draw(spriteBatch, "DOWNED", sx + 40, windowHeight - sy + -42)
+                                        }
+                                        actor.isReviving -> {
+                                            hporange.draw(spriteBatch, "GETTING REVIVED", sx + 40, windowHeight - sy + -42)
+                                        }
+                                        else -> hpgreen.draw(spriteBatch, "Alive", sx + 40, windowHeight - sy + -42)
+                                    }
+
+
+                            }
 
                         }
                         2 -> {
@@ -1487,7 +1634,34 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
     }
 
 
-    private fun drawGrid() {
+        fun drawMapMarkers() {
+            paint (camera.combined) {
+                for (team in teams.values) {
+                    if (team.showMapMarker) {
+                        //println(team.mapMarkerPosition)
+                        val icon = markers[team.memberNumber]
+                        val (x, y) = team.mapMarkerPosition
+                        draw(icon, x, y, 0f, mapMarkerScale, false)
+                    }
+                }
+            }
+        }
+
+
+
+    fun SpriteBatch.draw(texture:TextureRegion,x:Float,y:Float,yaw:Float,scale:Float,zoom:Boolean = true) {
+        val w = texture.regionWidth.toFloat()
+        val h = texture.regionHeight.toFloat()
+        val scale = if (zoom) scale else scale*camera.zoom
+        draw(texture,x-w/2,
+                y-h/2,
+                w/2,h/2,
+                w,h,
+                scale,scale,
+                yaw)
+    }
+
+private fun drawGrid() {
         draw(Filled) {
             val unit = gridWidth / 8
             val unit2 = unit / 10
@@ -1510,26 +1684,28 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
     private var lastPlayTime = System.currentTimeMillis()
     private fun safeZoneHint() {
-        if (PoisonGasWarningPosition.len() > 0) {
-            val dir = PoisonGasWarningPosition.cpy().sub(selfCoords)
-            val road = dir.len() - PoisonGasWarningRadius
-            if (road > 0) {
-                val runningTime = (road / runSpeed).toInt()
-                val (x, y) = dir.nor().scl(road).add(selfCoords).mapToWindow()
-                littleFont.draw(spriteBatch, "$runningTime", x, windowHeight - y)
-                val remainingTime = (TotalWarningDuration - ElapsedWarningDuration).toInt()
-                if (remainingTime == 60 && runningTime > remainingTime) {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastPlayTime > 10000) {
-                        lastPlayTime = currentTime
-                        alarmSound.play()
+
+            if (PoisonGasWarningPosition.len() > 0) {
+                val dir = PoisonGasWarningPosition.cpy().sub(selfCoords)
+                val road = dir.len() - PoisonGasWarningRadius
+                if (road > 0) {
+                    val runningTime = (road / runSpeed).toInt()
+                    val (x, y) = dir.nor().scl(road).add(selfCoords).mapToWindow()
+                    littleFont.draw(spriteBatch, "$runningTime", x, windowHeight - y)
+                    val remainingTime = (TotalWarningDuration - ElapsedWarningDuration).toInt()
+                    if (remainingTime == 60 && runningTime > remainingTime) {
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastPlayTime > 10000) {
+                            lastPlayTime = currentTime
+                            alarmSound.play()
+                        }
                     }
                 }
             }
         }
-    }
 
-    private inline fun draw(type: ShapeType, draw: ShapeRenderer.() -> Unit) {
+
+    private inline fun draw(type:ShapeType,draw:ShapeRenderer.() -> Unit) {
         shapeRenderer.apply {
             begin(type)
             draw()
@@ -1552,9 +1728,9 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
 
 
     private fun isTeamMate(actor:Actor?):Int {
-        val playerStateGUID=actorWithPlayerState[actor?.netGUID ?: return 0] ?: return 0
-        val playerState=actors[playerStateGUID] as? PlayerState ?: return 0
-        return team[playerState.name] ?: 0
+        val teamID = (actor as? Character)?.teamID ?: return -1
+        val team = actors[teamID] as? Team ?: return -1
+        return team.memberNumber
     }
 
     override fun resize(width: Int, height: Int) {
@@ -1582,6 +1758,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         menuFontOFF.dispose()
         hporange.dispose()
         hpgreen.dispose()
+        itemAtlas.dispose()
         hpred.dispose()
         corpseboximage.dispose()
         AirDropAllTheColors.dispose()
@@ -1589,6 +1766,7 @@ class GLMap : InputAdapter(), ApplicationListener, GameListener {
         iconImages.iconSheet.dispose()
         compaseFont.dispose()
         compaseFontShadow.dispose()
+        pawnAtlas.dispose()
 
         var cur = 0
         spriteBatch.dispose()

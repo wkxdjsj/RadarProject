@@ -134,9 +134,6 @@ object ActorCMD : GameListener {
                 22 -> {
                     val Rotation = readRotationShort()
                 }//propertyRotator()
-                23 -> {
-                    val result = propertyBool()
-                }
                 24 -> {
                     val result = propertyBool()
                 }

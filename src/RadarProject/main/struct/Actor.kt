@@ -1,9 +1,11 @@
 package main.struct
 
-import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.math.*
 import main.struct.Archetype.*
 import main.struct.Archetype.Companion.fromArchetype
 import main.struct.Archetype.PlayerState
+import main.struct.Archetype.Plane
+import main.struct.cmd.WeaponReplicator
 import main.util.DynamicArray
 import main.util.tuple2
 import java.util.Collections.newSetFromMap
@@ -69,6 +71,8 @@ enum class Archetype { //order matters, it affects the order of drawing
         return when (type) {
             Player -> Character(netGUID,type,archetype.pathName)
             PlayerState -> PlayerState(netGUID,type,archetype.pathName)
+            Team -> Team(netGUID,type,archetype.pathName)
+            Weapon -> Weapon(netGUID,type,archetype.pathName)
             TwoSeatBoat,FourSeatDU,FourSeatP,SixSeatBoat,
             TwoSeatBike,TwoSeatCar,
             ThreeSeatCar,SixSeatCar,Plane -> Vehicle(netGUID,type,archetype.pathName)
@@ -79,19 +83,18 @@ enum class Archetype { //order matters, it affects the order of drawing
 
 open class Actor(val netGUID:NetworkGUID,val type:Archetype,val typeName:String) {
 
-    var location=Vector3.Zero
-    var rotation=Vector3.Zero
-    var velocity=Vector3.Zero
+    var location = Vector3.Zero
+    var rotation = Vector3.Zero
+    var velocity = Vector3.Zero
 
-    var owner:NetworkGUID?=null
-    var attachParent:NetworkGUID?=null
-    var attachChildren=newSetFromMap(ConcurrentHashMap<NetworkGUID,Boolean>())
-    var isStatic=false
+    var owner:NetworkGUID? = null
+    var attachParent:NetworkGUID? = null
+    var attachChildren = newSetFromMap(ConcurrentHashMap<NetworkGUID,Boolean>())
+    var isStatic = false
 
     override fun toString()="[${netGUID.value}]($typeName)"
     
     val isAPawn = when (type) {
-        Parachute,
         TwoSeatBoat,
         SixSeatBoat,
         TwoSeatBike,
@@ -100,8 +103,9 @@ open class Actor(val netGUID:NetworkGUID,val type:Archetype,val typeName:String)
         FourSeatDU,
         FourSeatP,
         SixSeatCar,
+        Player,
         Plane,
-        Player -> true
+        Parachute -> true
         else -> false
     }
     val isACharacter = type == Player
@@ -109,22 +113,39 @@ open class Actor(val netGUID:NetworkGUID,val type:Archetype,val typeName:String)
 }
 
 class Character(netGUID:NetworkGUID,type:Archetype,typeName:String): Actor(netGUID,type,typeName) {
-    var health=100f
-    var groggyHealth=100f
-    var boostGauge=0f
-    var isReviving=false
-    var isGroggying=false
+    var health = 100f
+    var groggyHealth = 100f
+    var boostGauge = 0f
+    var isReviving = false
+    var isGroggying = false
+    var playerStateID = NetworkGUID(0)
+    var teamID = NetworkGUID(0)
 }
 
 class PlayerState(netGUID:NetworkGUID,type:Archetype,typeName:String): Actor(netGUID,type,typeName) {
-    var name:String=""
-    var teamNumber=0
-    var numKills=0
-    val equipableItems=DynamicArray<tuple2<String,Float>?>(3,0)
-    val castableItems=DynamicArray<tuple2<String,Int>?>(8,0)
+    var name:String = ""
+    var teamNumber = 0
+    var numKills = 0
+    val equipableItems = DynamicArray<tuple2<String,Float>?>(3,0)
+    val castableItems = DynamicArray<tuple2<String,Int>?>(8,0)
+}
+
+class Team(netGUID:NetworkGUID,type:Archetype,typeName:String): Actor(netGUID,type,typeName) {
+    var memberNumber = 0
+    val mapMarkerPosition = Vector2()
+    var showMapMarker = false
+
 }
 
 class Vehicle(netGUID:NetworkGUID,type:Archetype,typeName:String): Actor(netGUID,type,typeName) {
-    var driverPlayerState=NetworkGUID(0)
+    var driverPlayerState = NetworkGUID(0)
 }
-    
+
+class Weapon(netGUID:NetworkGUID,type:Archetype,typeName:String): Actor(netGUID,type,typeName) {
+    var ammoPerClip = 0
+    var currentAmmoInClip = 0
+    var currentZeroLevel = 0
+    var isHipped = false
+    var firingModeIndex = 0
+    var weaponSpread = 0f
+}
